@@ -1,7 +1,8 @@
-const TILE_SIZE = 32; // Each grid tile is 32x32 pixels
-const GRID_SIZE = 18; // 18x18 grid matches 576x576 canvas
+const TILE_SIZE = 32; 
+const GRID_COLS = 26; // 26 columns * 32px = 832px wide canvas
+const GRID_ROWS = 18; // 18 rows * 32px = 576px high canvas
 
-// 1 = Wall, 0 = Dot to collect
+// 1 = Wall, 0 = Dot to collect, 2 = Empty floor
 const gameMap = [,
  ,
  ,
@@ -19,5 +20,5 @@ const gameMap = [,
  ,
  ,
  ,
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];

@@ -2,7 +2,6 @@ const TILE_SIZE = 32;
 const GRID_COLS = 26; // 832px width
 const GRID_ROWS = 18; // 576px height
 
-// Initialize global grid tracking storage
 let gameMap = [];
 
 // 1 = Wall, 0 = Dot to collect, 2 = Empty floor, 3 = Level exit stairs
@@ -33,5 +32,4 @@ function generateProceduralMaze() {
     gameMap[GRID_ROWS - 2][GRID_COLS - 2] = 3; 
 }
 
-// Generate immediately on script resource loading frame
 generateProceduralMaze();

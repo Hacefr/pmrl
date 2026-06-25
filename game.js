@@ -15,36 +15,31 @@ window.player = {
 if (window.BabyEntity) window.BabyEntity.init();
 if (window.calculateInitialLevelDots) window.calculateInitialLevelDots();
 
-// CLOCK 1: Permanent Global Animation Heartbeat Loop (Never pauses)
+// Heartbeat Clocks
 setInterval(() => {
-    // Pac-Man only chews if moving, but Baby's global rendering parameters tick continuously
     if (window.player.currentDir && !window.player.isDead) {
         window.player.animFrame = (window.player.animFrame + 1) % 2;
     }
     if (!window.player.isDead) {
-        window.drawGame(); // Ensure smooth frame rendering even if sitting still
+        window.drawGame(); 
     }
 }, 150);
 
-// CLOCK 2: Independent Subsystem & Enemy Physics Clock Loop (Runs completely unbothered by player inputs)
 setInterval(() => {
     if (!window.player.isDead) {
-        // Run AI positional trackers and check collision vectors constantly
         if (window.BabyEntity) {
             window.BabyEntity.update(window.player.x, window.player.y, window.gamePhase, window.totalGlitchCount);
         }
         checkLethalCollisions();
     }
-}, 50); // High-frequency 50ms tick rate guarantees Baby updates instantly while player is idle
+}, 50);
 
-// CLOCK 3: Core Continuous Player Movement Step Grid Engine
 setInterval(() => {
     if (!window.player.isDead) {
         updateGameTick();
     }
 }, 180);
 
-// CLOCK 4: Endgame Glitch Screen Matrix Corruption Ticker
 setInterval(() => {
     if (window.gamePhase === "gold" && !window.player.isDead && window.spawnRandomGlitchTile) {
         window.spawnRandomGlitchTile();
@@ -57,7 +52,6 @@ function checkLethalCollisions() {
         return;
     }
     if (window.BabyEntity) {
-        // Tight, fluid tracking circle checks
         let pDistX = Math.abs(window.player.x - window.BabyEntity.x);
         let pDistY = Math.abs(window.player.y - window.BabyEntity.y);
         if (pDistX < 0.70 && pDistY < 0.70) {
@@ -118,9 +112,13 @@ function updateGameTick() {
                 window.triggerGoldPhaseExtraction();
             }
         } else if (tile === 4 && window.gamePhase === "gold") {
+            // HARVEST LOGIC: Eating a gold dot gives score AND +1 persistent gold currency coin
             window.gameMap[window.player.y][window.player.x] = 2; 
             window.score += 50; 
+            window.goldWallet += 1; 
+            
             document.getElementById("scoreVal").textContent = window.score;
+            document.getElementById("goldVal").textContent = window.goldWallet;
         } else if (tile === 3 && window.gamePhase === "gold") {
             window.advanceToNextLevel();
             return;

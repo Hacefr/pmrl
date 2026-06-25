@@ -6,10 +6,9 @@ const phaseVal = document.getElementById("phaseVal");
 
 let score = 0;
 let currentLevel = 1;
-let gamePhase = "white"; // "white" or "gold"
+let gamePhase = "white"; 
 let isSpriteLoaded = false;
 
-// Calculate structural true map center to safely deploy player inside Ghost House
 const startY = Math.floor(WORLD_ROWS / 2);
 const startX = Math.floor(WORLD_COLS / 2);
 
@@ -22,7 +21,6 @@ const player = {
     nextDir: null
 };
 
-// Camera view boundaries positions tracking offset variables
 const camera = {
     x: 0,
     y: 0
@@ -37,11 +35,10 @@ playerSprite.onload = () => {
 };
 
 playerSprite.onerror = () => {
-    console.warn("player.png not found. Using retro vector graphics engine fallback.");
+    console.warn("player.png not found. Running backup retro vector rendering.");
     drawGame();
 };
 
-// Timers for animation steps and constant scrolling ticks
 setInterval(() => {
     if (player.currentDir) {
         player.animFrame = (player.animFrame + 1) % 2;
@@ -53,11 +50,9 @@ setInterval(() => {
 }, 180);
 
 function updateCameraPosition() {
-    // Center the viewport anchor smoothly over the player pixel values coordinates
     let targetCamX = (player.x * TILE_SIZE) - (canvas.width / 2) + (TILE_SIZE / 2);
     let targetCamY = (player.y * TILE_SIZE) - (canvas.height / 2) + (TILE_SIZE / 2);
 
-    // Clamp camera within the absolute outermost edges of the massive world array boundaries
     camera.x = Math.max(0, Math.min(targetCamX, (WORLD_COLS * TILE_SIZE) - canvas.width));
     camera.y = Math.max(0, Math.min(targetCamY, (WORLD_ROWS * TILE_SIZE) - canvas.height));
 }
@@ -69,7 +64,6 @@ function checkWhitePhaseClear() {
             if (gameMap[r][c] === 0) remainingWhiteDots++;
         }
     }
-
     if (remainingWhiteDots === 0 && gamePhase === "white") {
         triggerGoldPhaseExtraction();
     }
@@ -80,17 +74,15 @@ function triggerGoldPhaseExtraction() {
     phaseVal.textContent = "EXTRACTION";
     phaseVal.style.color = "#ffff00";
 
-    // TRANSFORMATION: Every single eaten tile path turns into Gold dots
     for (let r = 1; r < WORLD_ROWS - 1; r++) {
         for (let c = 1; c < WORLD_COLS - 1; c++) {
             if (gameMap[r][c] === 2) {
-                // Do not place dots directly inside the center spawn house perimeter walls
                 const centerY = Math.floor(WORLD_ROWS / 2);
                 const centerX = Math.floor(WORLD_COLS / 2);
                 if (r >= centerY - 1 && r <= centerY + 1 && c >= centerX - 2 && c <= centerX + 2) {
                     continue;
                 }
-                gameMap[r][c] = 4; // Spawn Gold Dot currency
+                gameMap[r][c] = 4; // Fill floor tiles with gold dots
             }
         }
     }
@@ -130,7 +122,7 @@ function isWalkable(targetX, targetY) {
     if (targetX >= 0 && targetX < WORLD_COLS && targetY >= 0 && targetY < WORLD_ROWS) {
         const tile = gameMap[targetY][targetX];
         if (tile === 1) return false;
-        if (tile === 3 && gamePhase === "white") return false; // Gate stays firmly locked in Phase 1
+        if (tile === 3 && gamePhase === "white") return false; // Red gate door blocks player in Phase 1
         return true;
     }
     return false;
@@ -159,20 +151,20 @@ function updateGameTick() {
 
         const tile = gameMap[player.y][player.x];
         if (tile === 0 && gamePhase === "white") {
-            gameMap[player.y][player.x] = 2; // Consume white dot
+            gameMap[player.y][player.x] = 2; 
             score += 10;
             scoreVal.textContent = score;
             checkWhitePhaseClear();
         } else if (tile === 4 && gamePhase === "gold") {
-            gameMap[player.y][player.x] = 2; // Consume gold currency
-            score += 50; // Gold dots give major score bonuses
+            gameMap[player.y][player.x] = 2; 
+            score += 50; 
             scoreVal.textContent = score;
         } else if (tile === 3 && gamePhase === "gold") {
             advanceToNextLevel();
             return;
         }
     } else {
-        player.currentDir = null; // Wall impact, halt progression steps
+        player.currentDir = null; 
     }
 
     updateCameraPosition();
@@ -196,7 +188,7 @@ window.addEventListener("keydown", (e) => {
                 updateGameTick();
             }
         } else {
-            player.nextDir = pressedDir; // Buffer execution turns smoothly
+            player.nextDir = pressedDir; 
         }
     }
 });
@@ -205,19 +197,16 @@ function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
-    // Offset everything by negative camera vector coordinates to follow scrolling motion
     ctx.translate(-camera.x, -camera.y);
 
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#0000ff";
 
-    // Dynamic Viewport Rendering bounds loops limits
     for (let r = 0; r < WORLD_ROWS; r++) {
         for (let c = 0; c < WORLD_COLS; c++) {
             let x = c * TILE_SIZE;
             let y = r * TILE_SIZE;
 
-            // PERFORMANCE SKIP: Do not spend GPU power rendering items completely outside view window
             if (x + TILE_SIZE < camera.x || x > camera.x + canvas.width ||
                 y + TILE_SIZE < camera.y || y > camera.y + canvas.height) {
                 continue;
@@ -226,26 +215,22 @@ function drawGame() {
             if (gameMap[r][c] === 1) {
                 ctx.strokeRect(x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
             } else if (gameMap[r][c] === 0) {
-                // White Pac-Dots
                 ctx.fillStyle = "#ffffff";
                 ctx.beginPath();
                 ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 3, 0, Math.PI * 2);
                 ctx.fill();
             } else if (gameMap[r][c] === 4) {
-                // Gold Currency Dots
                 ctx.fillStyle = "#ffff00";
                 ctx.beginPath();
                 ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 5, 0, Math.PI * 2);
                 ctx.fill();
             } else if (gameMap[r][c] === 3) {
-                // Ghost House Exit Door Gate Portal
-                ctx.fillStyle = gamePhase === "white" ? "#ff0000" : "#ffff00"; // Red locked, glowing yellow unlocked
+                ctx.fillStyle = gamePhase === "white" ? "#ff0000" : "#ffff00"; 
                 ctx.fillRect(x + 2, y + 12, TILE_SIZE - 4, 8);
             }
         }
     }
 
-    // Render Player inside Camera space transform limits
     let pX = player.x * TILE_SIZE + TILE_SIZE / 2;
     let pY = player.y * TILE_SIZE + TILE_SIZE / 2;
 
@@ -269,9 +254,8 @@ function drawGame() {
         ctx.fill();
     }
     ctx.restore();
-    ctx.restore(); // Close the global camera transformation sequence matrix window
+    ctx.restore(); 
 }
 
-// Initial draw execution frame load layout
 updateCameraPosition();
 drawGame();

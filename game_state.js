@@ -1,15 +1,11 @@
-// Global State Tracking Registers
 window.score = 0;
 window.currentLevel = 1;
 window.gamePhase = "white"; 
-
-// NEW: Persistent Economy Currency Wallet (Rolls over smoothly across level clearances)
 window.goldWallet = 0;
 
-// QOL Inventory Statistics
-window.totalLevelWhiteDots = 0;
-window.consumedWhiteDots = 0;
-window.totalGlitchCount = 0;
+// NEW: Active item tracking registers
+window.hasRadarCompass = false;
+window.hasAgilityJuice = false;
 
 window.calculateInitialLevelDots = function() {
     window.totalLevelWhiteDots = 0;
@@ -56,7 +52,7 @@ window.triggerGoldPhaseExtraction = function() {
                 if (r >= centerY - 1 && r <= centerY + 1 && c >= centerX - 2 && c <= centerX + 2) {
                     continue;
                 }
-                window.gameMap[r][c] = 4; // Spawn Gold Dots
+                window.gameMap[r][c] = 4; 
             }
         }
     }
@@ -72,7 +68,7 @@ window.spawnRandomGlitchTile = function() {
     if (r >= centerY - 2 && r <= centerY + 2 && c >= centerX - 3 && c <= centerX + 3) return;
 
     if (window.gameMap[r] && window.gameMap[r][c] !== 3) {
-        window.gameMap[r][c] = 5; // Glitch tile
+        window.gameMap[r][c] = 5; 
         window.totalGlitchCount++;
         window.drawGame();
     }
@@ -106,9 +102,18 @@ window.advanceToNextLevel = function() {
 
     window.player.x = Math.floor(window.colsCount / 2);
     window.player.y = Math.floor(window.rowsCount / 2);
+    
+    // Smooth reset anchoring initialization positions
+    window.player.renderX = window.player.x;
+    window.player.renderY = window.player.y;
+    
     window.player.currentDir = null;
     window.player.nextDir = null;
     window.player.angle = 0;
+
+    // FIXED: Synchronize your currency HUD counter display instantly on level load
+    const goldHud = document.getElementById("goldVal");
+    if (goldHud) goldHud.textContent = window.goldWallet;
 
     window.BabyEntity.init();
     window.updateCameraPosition();

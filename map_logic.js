@@ -7,13 +7,14 @@ window.VIEW_ROWS = 18;
 window.gameMap = [];
 
 window.generateProceduralMaze = function() {
-    // ROUTING GATE: If it is the first stage run, deploy your custom 500 dots starter layout module
-    if (window.currentLevel === 1 && typeof window.generateLevel1StarterMap === "function") {
+    // ROUTING GATE: Read the current level safely. If Level 1, load your starter template module
+    let activeLevel = window.currentLevel || 1;
+    if (activeLevel === 1 && typeof window.generateLevel1StarterMap === "function") {
         window.generateLevel1StarterMap();
         return;
     }
 
-    // LEVEL 2+: Continue utilizing your advanced randomized infinite pillar carver engine
+    // LEVEL 2+: Procedural Pillar Carver Engine
     window.gameMap = [];
 
     for (let r = 0; r < window.WORLD_ROWS; r++) {
@@ -47,7 +48,8 @@ window.generateProceduralMaze = function() {
     const centerY = Math.floor(window.WORLD_ROWS / 2);
     const centerX = Math.floor(window.WORLD_COLS / 2);
 
-    for (let r = center-1; r <= centerY + 1; r++) {
+    // FIXED: Corrected 'center-1' syntax to 'centerY - 1' to resolve script freezing
+    for (let r = centerY - 1; r <= centerY + 1; r++) {
         for (let c = centerX - 2; c <= centerX + 2; c++) {
             window.gameMap[r][c] = 2; 
         }
@@ -114,4 +116,7 @@ function ensureMapConnectivity(startX, startY) {
     }
 }
 
-window.generateProceduralMaze();
+// FIXED: Delayed entry initialization pass to let game_state.js initialize window.currentLevel first
+window.addEventListener("load", () => {
+    window.generateProceduralMaze();
+});

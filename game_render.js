@@ -24,10 +24,32 @@ window.updateCameraPosition = function() {
     window.camera.y = Math.max(0, Math.min(targetCamY, (window.rowsCount * window.sizeTile) - canvas.height));
 };
 
+// NEW: Automation function that populates the side frames using your placeholder graphic
+window.syncSidebarUIPanels = function() {
+    const curseSlot = document.getElementById("curseSlot1");
+    const upgradeSlot = document.getElementById("upgradeSlot1");
+
+    // Clear and pop open placeholders to verify layouts align cleanly
+    if (curseSlot && curseSlot.classList.contains("emptySlot")) {
+        curseSlot.classList.remove("emptySlot");
+        curseSlot.classList.add("activeCurse");
+        curseSlot.innerHTML = `<img src="assets/sprites/placeholder.png" alt="Test Curse">`;
+    }
+
+    if (upgradeSlot && upgradeSlot.classList.contains("emptySlot")) {
+        upgradeSlot.classList.remove("emptySlot");
+        upgradeSlot.classList.add("activeUpgrade");
+        upgradeSlot.innerHTML = `<img src="assets/sprites/placeholder.png" alt="Test Upgrade">`;
+    }
+};
+
 window.drawGame = function() {
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
     if (!canvas || !ctx) return;
+
+    // Run dynamic frame syncing pass
+    window.syncSidebarUIPanels();
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();

@@ -1,4 +1,3 @@
-// Global world configurations across window scopes
 window.TILE_SIZE = 32; 
 window.WORLD_COLS = 60; 
 window.WORLD_ROWS = 40; 
@@ -7,55 +6,53 @@ window.VIEW_ROWS = 18;
 
 window.gameMap = [];
 
-// Tile IDs: 1=Wall, 0=White Dot, 2=Empty Floor, 3=Gate Door, 4=Gold Dot
 window.generateProceduralMaze = function() {
+    // ROUTING GATE: If it is the first stage run, deploy your custom 500 dots starter layout module
+    if (window.currentLevel === 1 && typeof window.generateLevel1StarterMap === "function") {
+        window.generateLevel1StarterMap();
+        return;
+    }
+
+    // LEVEL 2+: Continue utilizing your advanced randomized infinite pillar carver engine
     window.gameMap = [];
 
-    // Step 1: Lay down a solid outer border, and fill the inside with open floors and dots
     for (let r = 0; r < window.WORLD_ROWS; r++) {
         window.gameMap[r] = [];
         for (let c = 0; c < window.WORLD_COLS; c++) {
             if (r === 0 || r === window.WORLD_ROWS - 1 || c === 0 || c === window.WORLD_COLS - 1) {
-                window.gameMap[r][c] = 1; // Outer solid boundary walls
+                window.gameMap[r][c] = 1; 
             } else {
-                window.gameMap[r][c] = 0; // Everything inside is initialized as paths with dots
+                window.gameMap[r][c] = 0; 
             }
         }
     }
 
-    // Step 2: Form a classic structured pillar grid (Approach A)
-    // Placing a wall tile on alternating even coordinates leaves perfect 1-tile wide corridors
     for (let r = 2; r < window.WORLD_ROWS - 2; r += 2) {
         for (let c = 2; c < window.WORLD_COLS - 2; c += 2) {
             window.gameMap[r][c] = 1;
 
-            // Randomly extend the pillar in ONE direction to form interesting corridors
-            // This builds legal maze walls without ever blobbing into giant solid block zones
             let roll = Math.random();
             if (roll < 0.20) {
-                window.gameMap[r + 1][c] = 1; // Extend Wall Down
+                window.gameMap[r + 1][c] = 1; 
             } else if (roll < 0.40) {
-                window.gameMap[r - 1][c] = 1; // Extend Wall Up
+                window.gameMap[r - 1][c] = 1; 
             } else if (roll < 0.60) {
-                window.gameMap[r][c + 1] = 1; // Extend Wall Right
+                window.gameMap[r][c + 1] = 1; 
             } else if (roll < 0.80) {
-                window.gameMap[r][c - 1] = 1; // Extend Wall Left
+                window.gameMap[r][c - 1] = 1; 
             }
         }
     }
 
-    // Step 3: Explicitly carve out and anchor the Ghost House in the center
     const centerY = Math.floor(window.WORLD_ROWS / 2);
     const centerX = Math.floor(window.WORLD_COLS / 2);
 
-    // Completely hollow out the inside space of the home box
-    for (let r = centerY - 1; r <= centerY + 1; r++) {
+    for (let r = center-1; r <= centerY + 1; r++) {
         for (let c = centerX - 2; c <= centerX + 2; c++) {
-            window.gameMap[r][c] = 2; // Floor with no dots
+            window.gameMap[r][c] = 2; 
         }
     }
 
-    // Build standard single-thickness perimeter borders around the home box
     for (let c = centerX - 3; c <= centerX + 3; c++) {
         window.gameMap[centerY - 2][c] = 1;
         window.gameMap[centerY + 2][c] = 1;
@@ -65,20 +62,16 @@ window.generateProceduralMaze = function() {
         window.gameMap[r][centerX + 3] = 1;
     }
 
-    // Overwrite the top-center wall segment with the red Gate Door (Tile Type 3)
     window.gameMap[centerY - 2][centerX] = 3;
 
-    // GUARANTEED ESCAPE LANES: Clear out walls directly surrounding the doorway path
     window.gameMap[centerY - 3][centerX] = 2;
     window.gameMap[centerY - 4][centerX] = 2;
     window.gameMap[centerY - 3][centerX - 1] = 2;
     window.gameMap[centerY - 3][centerX + 1] = 2;
     
-    // Clear out paths leading down and out away from the side parameters for extra fluid flow
     window.gameMap[centerY][centerX - 4] = 0;
     window.gameMap[centerY][centerX + 4] = 0;
 
-    // Step 4: Run a lightweight connectivity validation safety pass 
     ensureMapConnectivity(centerX, centerY);
 };
 
@@ -88,7 +81,6 @@ function ensureMapConnectivity(startX, startY) {
         reached[r] = new Array(window.WORLD_COLS).fill(false);
     }
 
-    // Use a queue to flood out from the center box
     let queue = [{ x: startX, y: startY }];
     reached[startY][startX] = true;
 
@@ -111,13 +103,10 @@ function ensureMapConnectivity(startX, startY) {
         }
     }
 
-    // Since our pillar layout doesn't create giant block blobs anymore, 
-    // any isolated dead ends that the queue couldn't touch are safely cleared out into corridors
     for (let r = 1; r < window.WORLD_ROWS - 1; r++) {
         for (let c = 1; c < window.WORLD_COLS - 1; c++) {
             if (window.gameMap[r][c] === 3) continue;
 
-            // If a tile was marked as a dot but it's physically trapped, turn it into an empty open floor
             if (window.gameMap[r][c] !== 1 && !reached[r][c]) {
                 window.gameMap[r][c] = 2; 
             }
@@ -125,5 +114,4 @@ function ensureMapConnectivity(startX, startY) {
     }
 }
 
-// Automatically compile map arrays on script loading sequences
 window.generateProceduralMaze();

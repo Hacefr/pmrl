@@ -9,7 +9,6 @@ let currentLevel = 1;
 let gamePhase = "white"; 
 let isSpriteLoaded = false;
 
-// Safe fallback calculation hooks linked to global map_logic definitions
 const rowsCount = window.WORLD_ROWS || 40;
 const colsCount = window.WORLD_COLS || 60;
 const sizeTile = window.TILE_SIZE || 32;
@@ -89,7 +88,7 @@ function triggerGoldPhaseExtraction() {
                 if (r >= centerY - 1 && r <= centerY + 1 && c >= centerX - 2 && c <= centerX + 2) {
                     continue;
                 }
-                window.gameMap[r][c] = 4; // Spawn Gold dots
+                window.gameMap[r][c] = 4; 
             }
         }
     }
@@ -127,11 +126,10 @@ function getDirOffsets(dir) {
 
 function isWalkable(targetX, targetY) {
     if (targetX >= 0 && targetX < colsCount && targetY >= 0 && targetY < rowsCount) {
-        // Safe check to verify if the matrix row exists before checking columns
         if (window.gameMap[targetY] !== undefined) {
             const tile = window.gameMap[targetY][targetX];
+            // FIXED: Red gate door tile (3) is now fully passable in all game phases
             if (tile === 1) return false;
-            if (tile === 3 && gamePhase === "white") return false; 
             return true;
         }
     }
@@ -213,7 +211,7 @@ function drawGame() {
     ctx.strokeStyle = "#0000ff";
 
     for (let r = 0; r < rowsCount; r++) {
-        if (!window.gameMap[r]) continue; // Guard rail skipping empty lines
+        if (!window.gameMap[r]) continue; 
         
         for (let c = 0; c < colsCount; c++) {
             let x = c * sizeTile;
@@ -269,6 +267,5 @@ function drawGame() {
     ctx.restore(); 
 }
 
-// Ensure first state paint cycle runs cleanly
 updateCameraPosition();
 drawGame();

@@ -9,7 +9,29 @@
 <body>
     <div id="gameContainer">
         <h1>PMRL: Pac-Man Roguelike</h1>
-        <canvas id="gameCanvas" width="832" height="576"></canvas>
+        
+        <!-- NEW: Three-Column Symmetrical Grid Workspace Layout -->
+        <div id="workspaceGrid">
+            <!-- Left Margin Column: Curses Panel -->
+            <div id="leftSidebar" class="hudSidebar">
+                <h2>CURSES</h2>
+                <div class="iconSlot emptySlot" id="curseSlot1"></div>
+                <div class="iconSlot emptySlot" id="curseSlot2"></div>
+            </div>
+
+            <!-- Central Core Viewport Column -->
+            <div id="centerColumn">
+                <canvas id="gameCanvas" width="832" height="576"></canvas>
+            </div>
+
+            <!-- Right Margin Column: Upgrades Panel -->
+            <div id="rightSidebar" class="hudSidebar">
+                <h2>UPGRADES</h2>
+                <div class="iconSlot emptySlot" id="upgradeSlot1"></div>
+                <div class="iconSlot emptySlot" id="upgradeSlot2"></div>
+            </div>
+        </div>
+
         <div id="ui">
             Score: <span id="scoreVal">0</span> | 
             Level: <span id="levelVal">1</span> | 
@@ -18,11 +40,12 @@
         </div>
         <p>Use WASD or Arrow Keys. Press once to move continuously.</p>
     </div>
-    <!-- Load structural scripts in exact dependency order -->
+    
+    <!-- Loading modules in strict dependency sequence -->
     <script src="map_logic.js"></script>
-<script src="entities/baby.js"></script>
-<script src="game_state.js"></script>
-<script src="game_render.js"></script>
-<script src="game.js"></script>
+    <script src="entities/baby.js"></script>
+    <script src="game_state.js"></script>
+    <script src="game_render.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>

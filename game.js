@@ -9,8 +9,13 @@ let currentLevel = 1;
 let gamePhase = "white"; 
 let isSpriteLoaded = false;
 
-const startY = Math.floor(WORLD_ROWS / 2);
-const startX = Math.floor(WORLD_COLS / 2);
+// Safe fallback calculation hooks linked to global map_logic definitions
+const rowsCount = window.WORLD_ROWS || 40;
+const colsCount = window.WORLD_COLS || 60;
+const sizeTile = window.TILE_SIZE || 32;
+
+const startY = Math.floor(rowsCount / 2);
+const startX = Math.floor(colsCount / 2);
 
 const player = {
     x: startX,
@@ -50,18 +55,19 @@ setInterval(() => {
 }, 180);
 
 function updateCameraPosition() {
-    let targetCamX = (player.x * TILE_SIZE) - (canvas.width / 2) + (TILE_SIZE / 2);
-    let targetCamY = (player.y * TILE_SIZE) - (canvas.height / 2) + (TILE_SIZE / 2);
+    let targetCamX = (player.x * sizeTile) - (canvas.width / 2) + (sizeTile / 2);
+    let targetCamY = (player.y * sizeTile) - (canvas.height / 2) + (sizeTile / 2);
 
-    camera.x = Math.max(0, Math.min(targetCamX, (WORLD_COLS * TILE_SIZE) - canvas.width));
-    camera.y = Math.max(0, Math.min(targetCamY, (WORLD_ROWS * TILE_SIZE) - canvas.height));
+    camera.x = Math.max(0, Math.min(targetCamX, (colsCount * sizeTile) - canvas.width));
+    camera.y = Math.max(0, Math.min(targetCamY, (rowsCount * sizeTile) - canvas.height));
 }
 
 function checkWhitePhaseClear() {
     let remainingWhiteDots = 0;
-    for (let r = 0; r < WORLD_ROWS; r++) {
-        for (let c = 0; c < WORLD_COLS; c++) {
-            if (gameMap[r][c] === 0) remainingWhiteDots++;
+    for (let r = 0; r < rowsCount; r++) {
+        if (!window.gameMap[r]) continue;
+        for (let c = 0; c < colsCount; c++) {
+            if (window.gameMap[r][c] === 0) remainingWhiteDots++;
         }
     }
     if (remainingWhiteDots === 0 && gamePhase === "white") {
@@ -74,15 +80,16 @@ function triggerGoldPhaseExtraction() {
     phaseVal.textContent = "EXTRACTION";
     phaseVal.style.color = "#ffff00";
 
-    for (let r = 1; r < WORLD_ROWS - 1; r++) {
-        for (let c = 1; c < WORLD_COLS - 1; c++) {
-            if (gameMap[r][c] === 2) {
-                const centerY = Math.floor(WORLD_ROWS / 2);
-                const centerX = Math.floor(WORLD_COLS / 2);
+    for (let r = 1; r < rowsCount - 1; r++) {
+        if (!window.gameMap[r]) continue;
+        for (let c = 1; c < colsCount - 1; c++) {
+            if (window.gameMap[r][c] === 2) {
+                const centerY = Math.floor(rowsCount / 2);
+                const centerX = Math.floor(colsCount / 2);
                 if (r >= centerY - 1 && r <= centerY + 1 && c >= centerX - 2 && c <= centerX + 2) {
                     continue;
                 }
-                gameMap[r][c] = 4; // Fill floor tiles with gold dots
+                window.gameMap[r][c] = 4; // Spawn Gold dots
             }
         }
     }
@@ -96,10 +103,10 @@ function advanceToNextLevel() {
     phaseVal.textContent = "COLLECTION";
     phaseVal.style.color = "#ffffff";
 
-    generateProceduralMaze();
+    window.generateProceduralMaze();
 
-    player.x = Math.floor(WORLD_COLS / 2);
-    player.y = Math.floor(WORLD_ROWS / 2);
+    player.x = Math.floor(colsCount / 2);
+    player.y = Math.floor(rowsCount / 2);
     player.currentDir = null;
     player.nextDir = null;
     player.angle = 0;
@@ -119,11 +126,14 @@ function getDirOffsets(dir) {
 }
 
 function isWalkable(targetX, targetY) {
-    if (targetX >= 0 && targetX < WORLD_COLS && targetY >= 0 && targetY < WORLD_ROWS) {
-        const tile = gameMap[targetY][targetX];
-        if (tile === 1) return false;
-        if (tile === 3 && gamePhase === "white") return false; // Red gate door blocks player in Phase 1
-        return true;
+    if (targetX >= 0 && targetX < colsCount && targetY >= 0 && targetY < rowsCount) {
+        // Safe check to verify if the matrix row exists before checking columns
+        if (window.gameMap[targetY] !== undefined) {
+            const tile = window.gameMap[targetY][targetX];
+            if (tile === 1) return false;
+            if (tile === 3 && gamePhase === "white") return false; 
+            return true;
+        }
     }
     return false;
 }
@@ -149,14 +159,14 @@ function updateGameTick() {
         player.x = targetX;
         player.y = targetY;
 
-        const tile = gameMap[player.y][player.x];
+        const tile = window.gameMap[player.y][player.x];
         if (tile === 0 && gamePhase === "white") {
-            gameMap[player.y][player.x] = 2; 
+            window.gameMap[player.y][player.x] = 2; 
             score += 10;
             scoreVal.textContent = score;
             checkWhitePhaseClear();
         } else if (tile === 4 && gamePhase === "gold") {
-            gameMap[player.y][player.x] = 2; 
+            window.gameMap[player.y][player.x] = 2; 
             score += 50; 
             scoreVal.textContent = score;
         } else if (tile === 3 && gamePhase === "gold") {
@@ -202,37 +212,39 @@ function drawGame() {
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#0000ff";
 
-    for (let r = 0; r < WORLD_ROWS; r++) {
-        for (let c = 0; c < WORLD_COLS; c++) {
-            let x = c * TILE_SIZE;
-            let y = r * TILE_SIZE;
+    for (let r = 0; r < rowsCount; r++) {
+        if (!window.gameMap[r]) continue; // Guard rail skipping empty lines
+        
+        for (let c = 0; c < colsCount; c++) {
+            let x = c * sizeTile;
+            let y = r * sizeTile;
 
-            if (x + TILE_SIZE < camera.x || x > camera.x + canvas.width ||
-                y + TILE_SIZE < camera.y || y > camera.y + canvas.height) {
+            if (x + sizeTile < camera.x || x > camera.x + canvas.width ||
+                y + sizeTile < camera.y || y > camera.y + canvas.height) {
                 continue;
             }
 
-            if (gameMap[r][c] === 1) {
-                ctx.strokeRect(x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-            } else if (gameMap[r][c] === 0) {
+            if (window.gameMap[r][c] === 1) {
+                ctx.strokeRect(x + 4, y + 4, sizeTile - 8, sizeTile - 8);
+            } else if (window.gameMap[r][c] === 0) {
                 ctx.fillStyle = "#ffffff";
                 ctx.beginPath();
-                ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 3, 0, Math.PI * 2);
+                ctx.arc(x + sizeTile / 2, y + sizeTile / 2, 3, 0, Math.PI * 2);
                 ctx.fill();
-            } else if (gameMap[r][c] === 4) {
+            } else if (window.gameMap[r][c] === 4) {
                 ctx.fillStyle = "#ffff00";
                 ctx.beginPath();
-                ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 5, 0, Math.PI * 2);
+                ctx.arc(x + sizeTile / 2, y + sizeTile / 2, 5, 0, Math.PI * 2);
                 ctx.fill();
-            } else if (gameMap[r][c] === 3) {
+            } else if (window.gameMap[r][c] === 3) {
                 ctx.fillStyle = gamePhase === "white" ? "#ff0000" : "#ffff00"; 
-                ctx.fillRect(x + 2, y + 12, TILE_SIZE - 4, 8);
+                ctx.fillRect(x + 2, y + 12, sizeTile - 4, 8);
             }
         }
     }
 
-    let pX = player.x * TILE_SIZE + TILE_SIZE / 2;
-    let pY = player.y * TILE_SIZE + TILE_SIZE / 2;
+    let pX = player.x * sizeTile + sizeTile / 2;
+    let pY = player.y * sizeTile + sizeTile / 2;
 
     ctx.save();
     ctx.translate(pX, pY);
@@ -244,12 +256,12 @@ function drawGame() {
         let sourceX = player.animFrame * frameW;
         let sourceY = (player.currentDir === "up" || player.currentDir === "down") ? frameH : 0;
 
-        ctx.drawImage(playerSprite, sourceX, sourceY, frameW, frameH, -TILE_SIZE / 2, -TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
+        ctx.drawImage(playerSprite, sourceX, sourceY, frameW, frameH, -sizeTile / 2, -sizeTile / 2, sizeTile, sizeTile);
     } else {
         ctx.fillStyle = "#ffff00";
         ctx.beginPath();
         let mouthSize = player.animFrame === 1 ? 0.2 : 0.04;
-        ctx.arc(0, 0, TILE_SIZE / 2 - 2, mouthSize * Math.PI, (2 - mouthSize) * Math.PI);
+        ctx.arc(0, 0, sizeTile / 2 - 2, mouthSize * Math.PI, (2 - mouthSize) * Math.PI);
         ctx.lineTo(0, 0);
         ctx.fill();
     }
@@ -257,5 +269,6 @@ function drawGame() {
     ctx.restore(); 
 }
 
+// Ensure first state paint cycle runs cleanly
 updateCameraPosition();
 drawGame();

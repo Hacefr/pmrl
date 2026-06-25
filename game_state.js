@@ -3,6 +3,9 @@ window.score = 0;
 window.currentLevel = 1;
 window.gamePhase = "white"; 
 
+// NEW: Persistent Economy Currency Wallet (Rolls over smoothly across level clearances)
+window.goldWallet = 0;
+
 // QOL Inventory Statistics
 window.totalLevelWhiteDots = 0;
 window.consumedWhiteDots = 0;

@@ -53,7 +53,7 @@ window.triggerGoldPhaseExtraction = function() {
                 if (r >= centerY - 1 && r <= centerY + 1 && c >= centerX - 2 && c <= centerX + 2) {
                     continue;
                 }
-                window.gameMap[r][c] = 4; // Spawn Gold
+                window.gameMap[r][c] = 4; // Spawn Gold Dots
             }
         }
     }

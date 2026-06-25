@@ -12,25 +12,39 @@ window.player = {
     isDead: false
 };
 
-// Fire boot initializations safely once script runs
 if (window.BabyEntity) window.BabyEntity.init();
 if (window.calculateInitialLevelDots) window.calculateInitialLevelDots();
 
-// Heartbeat Loop Clocks
+// CLOCK 1: Permanent Global Animation Heartbeat Loop (Never pauses)
 setInterval(() => {
+    // Pac-Man only chews if moving, but Baby's global rendering parameters tick continuously
     if (window.player.currentDir && !window.player.isDead) {
         window.player.animFrame = (window.player.animFrame + 1) % 2;
     }
+    if (!window.player.isDead) {
+        window.drawGame(); // Ensure smooth frame rendering even if sitting still
+    }
 }, 150);
 
+// CLOCK 2: Independent Subsystem & Enemy Physics Clock Loop (Runs completely unbothered by player inputs)
+setInterval(() => {
+    if (!window.player.isDead) {
+        // Run AI positional trackers and check collision vectors constantly
+        if (window.BabyEntity) {
+            window.BabyEntity.update(window.player.x, window.player.y, window.gamePhase, window.totalGlitchCount);
+        }
+        checkLethalCollisions();
+    }
+}, 50); // High-frequency 50ms tick rate guarantees Baby updates instantly while player is idle
+
+// CLOCK 3: Core Continuous Player Movement Step Grid Engine
 setInterval(() => {
     if (!window.player.isDead) {
         updateGameTick();
-        if (window.BabyEntity) window.BabyEntity.update(window.player.x, window.player.y, window.gamePhase, window.totalGlitchCount);
-        checkLethalCollisions();
     }
 }, 180);
 
+// CLOCK 4: Endgame Glitch Screen Matrix Corruption Ticker
 setInterval(() => {
     if (window.gamePhase === "gold" && !window.player.isDead && window.spawnRandomGlitchTile) {
         window.spawnRandomGlitchTile();
@@ -43,9 +57,12 @@ function checkLethalCollisions() {
         return;
     }
     if (window.BabyEntity) {
+        // Tight, fluid tracking circle checks
         let pDistX = Math.abs(window.player.x - window.BabyEntity.x);
         let pDistY = Math.abs(window.player.y - window.BabyEntity.y);
-        if (pDistX < 0.75 && pDistY < 0.75) window.triggerGameOver();
+        if (pDistX < 0.70 && pDistY < 0.70) {
+            window.triggerGameOver();
+        }
     }
 }
 
@@ -113,7 +130,6 @@ function updateGameTick() {
     }
 
     window.updateCameraPosition();
-    window.drawGame();
 }
 
 window.addEventListener("keydown", (e) => {
@@ -139,6 +155,5 @@ window.addEventListener("keydown", (e) => {
     }
 });
 
-// Run immediate entry paint sequence
 window.updateCameraPosition();
 window.drawGame();

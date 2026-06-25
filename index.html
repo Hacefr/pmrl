@@ -13,12 +13,14 @@
         <div id="ui">
             Score: <span id="scoreVal">0</span> | 
             Level: <span id="levelVal">1</span> | 
+            Dots: <span id="dotCounterVal">0/0</span> | 
             Phase: <span id="phaseVal" style="color: #ffffff;">COLLECTION</span>
         </div>
         <p>Use WASD or Arrow Keys. Press once to move continuously.</p>
     </div>
-    <!-- Load map algorithms first -->
+    <!-- Load structural scripts in exact dependency order -->
     <script src="map_logic.js"></script>
+    <script src="entities/baby.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

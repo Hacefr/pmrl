@@ -6,21 +6,22 @@ window.playerSprite.src = 'assets/sprites/player.png';
 
 window.playerSprite.onload = () => {
     window.isSpriteLoaded = true;
-    window.drawGame();
 };
 
 window.playerSprite.onerror = () => {
     console.warn("player.png asset missing. Using vector fallbacks.");
-    window.drawGame();
 };
 
 window.updateCameraPosition = function() {
     const canvas = document.getElementById("gameCanvas");
     if (!canvas) return;
     
-    // SMOOTH CAMERA: Tracks the sub-pixel glide position registers instead of the grid locks
-    let targetCamX = (window.player.renderX * window.sizeTile) - (canvas.width / 2) + (window.sizeTile / 2);
-    let targetCamY = (window.player.renderY * window.sizeTile) - (canvas.height / 2) + (window.sizeTile / 2);
+    // Smoothly follow sub-pixel interpolation registers safely
+    let pX = (window.player && window.player.renderX !== undefined) ? window.player.renderX : (window.colsCount / 2);
+    let pY = (window.player && window.player.renderY !== undefined) ? window.player.renderY : (window.rowsCount / 2);
+
+    let targetCamX = (pX * window.sizeTile) - (canvas.width / 2) + (window.sizeTile / 2);
+    let targetCamY = (pY * window.sizeTile) - (canvas.height / 2) + (window.sizeTile / 2);
 
     window.camera.x = Math.max(0, Math.min(targetCamX, (window.colsCount * window.sizeTile) - canvas.width));
     window.camera.y = Math.max(0, Math.min(targetCamY, (window.rowsCount * window.sizeTile) - canvas.height));
@@ -30,7 +31,6 @@ window.syncSidebarUIPanels = function() {
     const curseSlot = document.getElementById("curseSlot1");
     const upgradeSlot = document.getElementById("upgradeSlot1");
 
-    // Clear placeholder automated loops. Only populate frames if upgrades are active
     if (curseSlot) {
         curseSlot.innerHTML = "";
         curseSlot.className = "iconSlot emptySlot";
@@ -50,7 +50,7 @@ window.syncSidebarUIPanels = function() {
 window.drawGame = function() {
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
-    if (!canvas || !ctx) return;
+    if (!canvas || !ctx || !window.gameMap || window.gameMap.length === 0) return;
 
     window.syncSidebarUIPanels();
 
@@ -58,7 +58,6 @@ window.drawGame = function() {
     ctx.save();
     ctx.translate(-window.camera.x, -window.camera.y);
 
-    // Render Connected Classic Neon Walls Pass
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#0000ff";
 
@@ -74,22 +73,19 @@ window.drawGame = function() {
             }
 
             if (window.gameMap[r][c] === 1) {
-                // FIXED: Code-driven neighbor checks connect your walls seamlessly into single paths
+                // FIXED: Stabilized neighbor checks with strict boundary boundaries
                 let pad = 4;
-                let topWall = (r > 0 && window.gameMap[r-1][c] === 1);
-                let botWall = (r < window.rowsCount - 1 && window.gameMap[r+1][c] === 1);
+                let topWall = (r > 0 && window.gameMap[r-1] && window.gameMap[r-1][c] === 1);
+                let botWall = (r < window.rowsCount - 1 && window.gameMap[r+1] && window.gameMap[r+1][c] === 1);
                 let leftWall = (c > 0 && window.gameMap[r][c-1] === 1);
                 let rightWall = (c < window.colsCount - 1 && window.gameMap[r][c+1] === 1);
 
                 ctx.beginPath();
-                // Top border line
+                // Draw connecting corridors cleanly based on structural checks
                 if (topWall) ctx.moveTo(x + pad, y); else ctx.moveTo(x + pad, y + pad);
                 if (rightWall) ctx.lineTo(window.sizeTile + x, y + pad); else ctx.lineTo(x + window.sizeTile - pad, y + pad);
-                // Right border line
                 if (botWall) ctx.lineTo(x + window.sizeTile - pad, y + window.sizeTile); else ctx.lineTo(x + window.sizeTile - pad, y + window.sizeTile - pad);
-                // Bottom border line
                 if (leftWall) ctx.lineTo(x, y + window.sizeTile - pad); else ctx.lineTo(x + pad, y + window.sizeTile - pad);
-                // Left border line
                 if (topWall) ctx.lineTo(x + pad, y); else ctx.lineTo(x + pad, y + pad);
                 ctx.stroke();
 
@@ -122,7 +118,6 @@ window.drawGame = function() {
         window.BabyEntity.draw(ctx, window.camera.x, window.camera.y, window.sizeTile);
     }
 
-    // SMOOTH RENDER RIFT: Paints player at visual sub-pixel positions instead of grid jumps
     let pX = window.player.renderX * window.sizeTile + window.sizeTile / 2;
     let pY = window.player.renderY * window.sizeTile + window.sizeTile / 2;
 

@@ -9,9 +9,14 @@
 <body>
     <div id="gameContainer">
         <h1>PMRL: Pac-Man Roguelike</h1>
+        <!-- Viewport window size remains an crisp 832x576 arcade box -->
         <canvas id="gameCanvas" width="832" height="576"></canvas>
-        <div id="ui">Score: <span id="scoreVal">0</span> | Level: <span id="levelVal">1</span></div>
-        <p>Use WASD or Arrow Keys to navigate the maze.</p>
+        <div id="ui">
+            Score: <span id="scoreVal">0</span> | 
+            Level: <span id="levelVal">1</span> | 
+            Phase: <span id="phaseVal" style="color: #ffffff;">COLLECTION</span>
+        </div>
+        <p>Use WASD or Arrow Keys. Press once to move continuously.</p>
     </div>
     <script src="map.js"></script>
     <script src="game.js"></script>

@@ -17,29 +17,33 @@ window.playerSprite.onerror = () => {
 window.updateCameraPosition = function() {
     const canvas = document.getElementById("gameCanvas");
     if (!canvas) return;
-    let targetCamX = (window.player.x * window.sizeTile) - (canvas.width / 2) + (window.sizeTile / 2);
-    let targetCamY = (window.player.y * window.sizeTile) - (canvas.height / 2) + (window.sizeTile / 2);
+    
+    // SMOOTH CAMERA: Tracks the sub-pixel glide position registers instead of the grid locks
+    let targetCamX = (window.player.renderX * window.sizeTile) - (canvas.width / 2) + (window.sizeTile / 2);
+    let targetCamY = (window.player.renderY * window.sizeTile) - (canvas.height / 2) + (window.sizeTile / 2);
 
     window.camera.x = Math.max(0, Math.min(targetCamX, (window.colsCount * window.sizeTile) - canvas.width));
     window.camera.y = Math.max(0, Math.min(targetCamY, (window.rowsCount * window.sizeTile) - canvas.height));
 };
 
-// NEW: Automation function that populates the side frames using your placeholder graphic
 window.syncSidebarUIPanels = function() {
     const curseSlot = document.getElementById("curseSlot1");
     const upgradeSlot = document.getElementById("upgradeSlot1");
 
-    // Clear and pop open placeholders to verify layouts align cleanly
-    if (curseSlot && curseSlot.classList.contains("emptySlot")) {
-        curseSlot.classList.remove("emptySlot");
-        curseSlot.classList.add("activeCurse");
-        curseSlot.innerHTML = `<img src="assets/sprites/placeholder.png" alt="Test Curse">`;
+    // Clear placeholder automated loops. Only populate frames if upgrades are active
+    if (curseSlot) {
+        curseSlot.innerHTML = "";
+        curseSlot.className = "iconSlot emptySlot";
     }
 
-    if (upgradeSlot && upgradeSlot.classList.contains("emptySlot")) {
-        upgradeSlot.classList.remove("emptySlot");
-        upgradeSlot.classList.add("activeUpgrade");
-        upgradeSlot.innerHTML = `<img src="assets/sprites/placeholder.png" alt="Test Upgrade">`;
+    if (upgradeSlot) {
+        if (window.hasRadarCompass) {
+            upgradeSlot.className = "iconSlot activeUpgrade";
+            upgradeSlot.innerHTML = `<img src="assets/sprites/placeholder.png" alt="Radar Compass">`;
+        } else {
+            upgradeSlot.innerHTML = "";
+            upgradeSlot.className = "iconSlot emptySlot";
+        }
     }
 };
 
@@ -48,13 +52,13 @@ window.drawGame = function() {
     const ctx = canvas.getContext("2d");
     if (!canvas || !ctx) return;
 
-    // Run dynamic frame syncing pass
     window.syncSidebarUIPanels();
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     ctx.translate(-window.camera.x, -window.camera.y);
 
+    // Render Connected Classic Neon Walls Pass
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#0000ff";
 
@@ -70,7 +74,25 @@ window.drawGame = function() {
             }
 
             if (window.gameMap[r][c] === 1) {
-                ctx.strokeRect(x + 4, y + 4, window.sizeTile - 8, window.sizeTile - 8);
+                // FIXED: Code-driven neighbor checks connect your walls seamlessly into single paths
+                let pad = 4;
+                let topWall = (r > 0 && window.gameMap[r-1][c] === 1);
+                let botWall = (r < window.rowsCount - 1 && window.gameMap[r+1][c] === 1);
+                let leftWall = (c > 0 && window.gameMap[r][c-1] === 1);
+                let rightWall = (c < window.colsCount - 1 && window.gameMap[r][c+1] === 1);
+
+                ctx.beginPath();
+                // Top border line
+                if (topWall) ctx.moveTo(x + pad, y); else ctx.moveTo(x + pad, y + pad);
+                if (rightWall) ctx.lineTo(window.sizeTile + x, y + pad); else ctx.lineTo(x + window.sizeTile - pad, y + pad);
+                // Right border line
+                if (botWall) ctx.lineTo(x + window.sizeTile - pad, y + window.sizeTile); else ctx.lineTo(x + window.sizeTile - pad, y + window.sizeTile - pad);
+                // Bottom border line
+                if (leftWall) ctx.lineTo(x, y + window.sizeTile - pad); else ctx.lineTo(x + pad, y + window.sizeTile - pad);
+                // Left border line
+                if (topWall) ctx.lineTo(x + pad, y); else ctx.lineTo(x + pad, y + pad);
+                ctx.stroke();
+
             } else if (window.gameMap[r][c] === 0) {
                 ctx.fillStyle = "#ffffff";
                 ctx.beginPath();
@@ -100,8 +122,9 @@ window.drawGame = function() {
         window.BabyEntity.draw(ctx, window.camera.x, window.camera.y, window.sizeTile);
     }
 
-    let pX = window.player.x * window.sizeTile + window.sizeTile / 2;
-    let pY = window.player.y * window.sizeTile + window.sizeTile / 2;
+    // SMOOTH RENDER RIFT: Paints player at visual sub-pixel positions instead of grid jumps
+    let pX = window.player.renderX * window.sizeTile + window.sizeTile / 2;
+    let pY = window.player.renderY * window.sizeTile + window.sizeTile / 2;
 
     ctx.save();
     ctx.translate(pX, pY);

@@ -5,6 +5,8 @@ window.sizeTile = window.TILE_SIZE || 32;
 window.player = {
     x: Math.floor(window.colsCount / 2),
     y: Math.floor(window.rowsCount / 2),
+    renderX: Math.floor(window.colsCount / 2), // Hook sub-pixel endpoints safely
+    renderY: Math.floor(window.rowsCount / 2),
     angle: 0,
     animFrame: 0,
     currentDir: null,
@@ -15,13 +17,10 @@ window.player = {
 if (window.BabyEntity) window.BabyEntity.init();
 if (window.calculateInitialLevelDots) window.calculateInitialLevelDots();
 
-// Heartbeat Clocks
+// Heartbeat Loop Timers
 setInterval(() => {
     if (window.player.currentDir && !window.player.isDead) {
         window.player.animFrame = (window.player.animFrame + 1) % 2;
-    }
-    if (!window.player.isDead) {
-        window.drawGame(); 
     }
 }, 150);
 
@@ -52,8 +51,9 @@ function checkLethalCollisions() {
         return;
     }
     if (window.BabyEntity) {
-        let pDistX = Math.abs(window.player.x - window.BabyEntity.x);
-        let pDistY = Math.abs(window.player.y - window.BabyEntity.y);
+        // Precise bounding intersection box tracking
+        let pDistX = Math.abs(window.player.renderX - window.BabyEntity.x);
+        let pDistY = Math.abs(window.player.renderY - window.BabyEntity.y);
         if (pDistX < 0.70 && pDistY < 0.70) {
             window.triggerGameOver();
         }
@@ -112,7 +112,6 @@ function updateGameTick() {
                 window.triggerGoldPhaseExtraction();
             }
         } else if (tile === 4 && window.gamePhase === "gold") {
-            // HARVEST LOGIC: Eating a gold dot gives score AND +1 persistent gold currency coin
             window.gameMap[window.player.y][window.player.x] = 2; 
             window.score += 50; 
             window.goldWallet += 1; 
@@ -126,8 +125,6 @@ function updateGameTick() {
     } else {
         window.player.currentDir = null; 
     }
-
-    window.updateCameraPosition();
 }
 
 window.addEventListener("keydown", (e) => {
@@ -152,6 +149,3 @@ window.addEventListener("keydown", (e) => {
         }
     }
 });
-
-window.updateCameraPosition();
-window.drawGame();

@@ -5,7 +5,7 @@ window.sizeTile = window.TILE_SIZE || 32;
 window.player = {
     x: Math.floor(window.colsCount / 2),
     y: Math.floor(window.rowsCount / 2),
-    renderX: Math.floor(window.colsCount / 2), // Hook sub-pixel endpoints safely
+    renderX: Math.floor(window.colsCount / 2), 
     renderY: Math.floor(window.rowsCount / 2),
     angle: 0,
     animFrame: 0,
@@ -14,36 +14,52 @@ window.player = {
     isDead: false
 };
 
-if (window.BabyEntity) window.BabyEntity.init();
-if (window.calculateInitialLevelDots) window.calculateInitialLevelDots();
+// SAFE BOOT SYSTEM: Fires timers and setups strictly after map arrays and assets exist in memory
+window.addEventListener("load", () => {
+    // Re-verify center configurations match active data loaders
+    window.rowsCount = window.WORLD_ROWS || 40;
+    window.colsCount = window.WORLD_COLS || 60;
+    window.sizeTile = window.TILE_SIZE || 32;
 
-// Heartbeat Loop Timers
-setInterval(() => {
-    if (window.player.currentDir && !window.player.isDead) {
-        window.player.animFrame = (window.player.animFrame + 1) % 2;
-    }
-}, 150);
+    window.player.x = Math.floor(window.colsCount / 2);
+    window.player.y = Math.floor(window.rowsCount / 2);
+    window.player.renderX = window.player.x;
+    window.player.renderY = window.player.y;
 
-setInterval(() => {
-    if (!window.player.isDead) {
-        if (window.BabyEntity) {
-            window.BabyEntity.update(window.player.x, window.player.y, window.gamePhase, window.totalGlitchCount);
+    if (window.BabyEntity) window.BabyEntity.init();
+    if (window.calculateInitialLevelDots) window.calculateInitialLevelDots();
+
+    // Fire Heartbeat intervals securely
+    setInterval(() => {
+        if (window.player.currentDir && !window.player.isDead) {
+            window.player.animFrame = (window.player.animFrame + 1) % 2;
         }
-        checkLethalCollisions();
-    }
-}, 50);
+    }, 150);
 
-setInterval(() => {
-    if (!window.player.isDead) {
-        updateGameTick();
-    }
-}, 180);
+    setInterval(() => {
+        if (!window.player.isDead) {
+            if (window.BabyEntity) {
+                window.BabyEntity.update(window.player.x, window.player.y, window.gamePhase, window.totalGlitchCount);
+            }
+            checkLethalCollisions();
+        }
+    }, 50);
 
-setInterval(() => {
-    if (window.gamePhase === "gold" && !window.player.isDead && window.spawnRandomGlitchTile) {
-        window.spawnRandomGlitchTile();
-    }
-}, 2500);
+    setInterval(() => {
+        if (!window.player.isDead) {
+            updateGameTick();
+        }
+    }, 180);
+
+    setInterval(() => {
+        if (window.gamePhase === "gold" && !window.player.isDead && window.spawnRandomGlitchTile) {
+            window.spawnRandomGlitchTile();
+        }
+    }, 2500);
+
+    if (window.updateCameraPosition) window.updateCameraPosition();
+    if (window.drawGame) window.drawGame();
+});
 
 function checkLethalCollisions() {
     if (window.gameMap[window.player.y] && window.gameMap[window.player.y][window.player.x] === 5) {
@@ -51,7 +67,6 @@ function checkLethalCollisions() {
         return;
     }
     if (window.BabyEntity) {
-        // Precise bounding intersection box tracking
         let pDistX = Math.abs(window.player.renderX - window.BabyEntity.x);
         let pDistY = Math.abs(window.player.renderY - window.BabyEntity.y);
         if (pDistX < 0.70 && pDistY < 0.70) {
@@ -103,8 +118,8 @@ function updateGameTick() {
         const tile = window.gameMap[window.player.y][window.player.x];
         if (tile === 0 && window.gamePhase === "white") {
             window.gameMap[window.player.y][window.player.x] = 2; 
-            window.score += 10;
-            document.getElementById("scoreVal").textContent = window.score;
+            window.window.score += 10;
+            document.getElementById("scoreVal").textContent = window.window.score;
             window.consumedWhiteDots++;
             window.updateDotCounterUI();
             
@@ -113,10 +128,10 @@ function updateGameTick() {
             }
         } else if (tile === 4 && window.gamePhase === "gold") {
             window.gameMap[window.player.y][window.player.x] = 2; 
-            window.score += 50; 
+            window.window.score += 50; 
             window.goldWallet += 1; 
             
-            document.getElementById("scoreVal").textContent = window.score;
+            document.getElementById("scoreVal").textContent = window.window.score;
             document.getElementById("goldVal").textContent = window.goldWallet;
         } else if (tile === 3 && window.gamePhase === "gold") {
             window.advanceToNextLevel();

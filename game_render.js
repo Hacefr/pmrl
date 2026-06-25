@@ -43,7 +43,7 @@ window.drawGame = function() {
             let y = r * window.sizeTile;
 
             if (x + window.sizeTile < window.camera.x || x > window.camera.x + canvas.width ||
-                y + window.window.sizeTile < window.camera.y || y > window.camera.y + canvas.height) {
+                y + window.sizeTile < window.camera.y || y > window.camera.y + canvas.height) {
                 continue;
             }
 

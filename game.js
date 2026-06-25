@@ -2,19 +2,30 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const scoreVal = document.getElementById("scoreVal");
 const levelVal = document.getElementById("levelVal");
+const phaseVal = document.getElementById("phaseVal");
 
 let score = 0;
 let currentLevel = 1;
+let gamePhase = "white"; // "white" or "gold"
 let isSpriteLoaded = false;
 
-// Player configuration setup
+// Calculate structural true map center to safely deploy player inside Ghost House
+const startY = Math.floor(WORLD_ROWS / 2);
+const startX = Math.floor(WORLD_COLS / 2);
+
 const player = {
-    x: 1,
-    y: 1,
+    x: startX,
+    y: startY,
     angle: 0,
     animFrame: 0,
-    currentDir: null, // Starts stationary until a key is pressed
-    nextDir: null     // Buffers the next turn input smoothly
+    currentDir: null,
+    nextDir: null
+};
+
+// Camera view boundaries positions tracking offset variables
+const camera = {
+    x: 0,
+    y: 0
 };
 
 const playerSprite = new Image();
@@ -26,53 +37,85 @@ playerSprite.onload = () => {
 };
 
 playerSprite.onerror = () => {
-    console.warn("player.png asset missing. Using vector fallback layout instead.");
+    console.warn("player.png not found. Using retro vector graphics engine fallback.");
     drawGame();
 };
 
-// --- GAME HEARTBEAT TIMERS ---
-
-// Animation clock: Swaps open/closed mouth frames
+// Timers for animation steps and constant scrolling ticks
 setInterval(() => {
     if (player.currentDir) {
         player.animFrame = (player.animFrame + 1) % 2;
     }
 }, 150);
 
-// Core Movement Tick Clock: Moves Pac-Man continuously every 180ms
 setInterval(() => {
-    updateMovementTick();
+    updateGameTick();
 }, 180);
 
-function checkWinCondition() {
-    let remainingDots = 0;
-    for (let r = 0; r < GRID_ROWS; r++) {
-        for (let c = 0; c < GRID_COLS; c++) {
-            if (gameMap[r] && gameMap[r][c] === 0) {
-                remainingDots++;
+function updateCameraPosition() {
+    // Center the viewport anchor smoothly over the player pixel values coordinates
+    let targetCamX = (player.x * TILE_SIZE) - (canvas.width / 2) + (TILE_SIZE / 2);
+    let targetCamY = (player.y * TILE_SIZE) - (canvas.height / 2) + (TILE_SIZE / 2);
+
+    // Clamp camera within the absolute outermost edges of the massive world array boundaries
+    camera.x = Math.max(0, Math.min(targetCamX, (WORLD_COLS * TILE_SIZE) - canvas.width));
+    camera.y = Math.max(0, Math.min(targetCamY, (WORLD_ROWS * TILE_SIZE) - canvas.height));
+}
+
+function checkWhitePhaseClear() {
+    let remainingWhiteDots = 0;
+    for (let r = 0; r < WORLD_ROWS; r++) {
+        for (let c = 0; c < WORLD_COLS; c++) {
+            if (gameMap[r][c] === 0) remainingWhiteDots++;
+        }
+    }
+
+    if (remainingWhiteDots === 0 && gamePhase === "white") {
+        triggerGoldPhaseExtraction();
+    }
+}
+
+function triggerGoldPhaseExtraction() {
+    gamePhase = "gold";
+    phaseVal.textContent = "EXTRACTION";
+    phaseVal.style.color = "#ffff00";
+
+    // TRANSFORMATION: Every single eaten tile path turns into Gold dots
+    for (let r = 1; r < WORLD_ROWS - 1; r++) {
+        for (let c = 1; c < WORLD_COLS - 1; c++) {
+            if (gameMap[r][c] === 2) {
+                // Do not place dots directly inside the center spawn house perimeter walls
+                const centerY = Math.floor(WORLD_ROWS / 2);
+                const centerX = Math.floor(WORLD_COLS / 2);
+                if (r >= centerY - 1 && r <= centerY + 1 && c >= centerX - 2 && c <= centerX + 2) {
+                    continue;
+                }
+                gameMap[r][c] = 4; // Spawn Gold Dot currency
             }
         }
     }
-    if (remainingDots === 0 && gameMap[GRID_ROWS - 2][GRID_COLS - 2] === 1) {
-        gameMap[GRID_ROWS - 2][GRID_COLS - 2] = 3;
-    }
+    drawGame();
 }
 
 function advanceToNextLevel() {
     currentLevel++;
     levelVal.textContent = currentLevel;
-    
-    player.x = 1;
-    player.y = 1;
-    player.angle = 0;
+    gamePhase = "white";
+    phaseVal.textContent = "COLLECTION";
+    phaseVal.style.color = "#ffffff";
+
+    generateProceduralMaze();
+
+    player.x = Math.floor(WORLD_COLS / 2);
+    player.y = Math.floor(WORLD_ROWS / 2);
     player.currentDir = null;
     player.nextDir = null;
-    
-    generateProceduralMaze();
+    player.angle = 0;
+
+    updateCameraPosition();
     drawGame();
 }
 
-// Converts a direction string to coordinate shifts and rotation angles
 function getDirOffsets(dir) {
     switch (dir) {
         case "up":    return { dx: 0,  dy: -1, angle: 1.5 * Math.PI };
@@ -84,15 +127,16 @@ function getDirOffsets(dir) {
 }
 
 function isWalkable(targetX, targetY) {
-    if (targetX >= 0 && targetX < GRID_COLS && targetY >= 0 && targetY < GRID_ROWS) {
-        return gameMap[targetY] !== undefined && gameMap[targetY][targetX] !== 1;
+    if (targetX >= 0 && targetX < WORLD_COLS && targetY >= 0 && targetY < WORLD_ROWS) {
+        const tile = gameMap[targetY][targetX];
+        if (tile === 1) return false;
+        if (tile === 3 && gamePhase === "white") return false; // Gate stays firmly locked in Phase 1
+        return true;
     }
     return false;
 }
 
-// Automatically processes continuous steps on every game clock pulse
-function updateMovementTick() {
-    // Try to switch to the buffered next direction if valid
+function updateGameTick() {
     if (player.nextDir) {
         let nextOffsets = getDirOffsets(player.nextDir);
         if (isWalkable(player.x + nextOffsets.dx, player.y + nextOffsets.dy)) {
@@ -101,38 +145,40 @@ function updateMovementTick() {
         }
     }
 
-    if (!player.currentDir) return; // Sit still until initial user input action
+    if (!player.currentDir) return;
 
-    let currentOffsets = getDirOffsets(player.currentDir);
-    let targetX = player.x + currentOffsets.dx;
-    let targetY = player.y + currentOffsets.dy;
+    let offsets = getDirOffsets(player.currentDir);
+    let targetX = player.x + offsets.dx;
+    let targetY = player.y + offsets.dy;
 
-    // Update facing angle to match active heading direction instantly
-    player.angle = currentOffsets.angle;
+    player.angle = offsets.angle;
 
     if (isWalkable(targetX, targetY)) {
         player.x = targetX;
         player.y = targetY;
 
-        const targetTile = gameMap[player.y][player.x];
-        if (targetTile === 0) {
-            gameMap[player.y][player.x] = 2; // Eat dot
+        const tile = gameMap[player.y][player.x];
+        if (tile === 0 && gamePhase === "white") {
+            gameMap[player.y][player.x] = 2; // Consume white dot
             score += 10;
             scoreVal.textContent = score;
-            checkWinCondition();
-        } else if (targetTile === 3) {
+            checkWhitePhaseClear();
+        } else if (tile === 4 && gamePhase === "gold") {
+            gameMap[player.y][player.x] = 2; // Consume gold currency
+            score += 50; // Gold dots give major score bonuses
+            scoreVal.textContent = score;
+        } else if (tile === 3 && gamePhase === "gold") {
             advanceToNextLevel();
             return;
         }
     } else {
-        // Hit a wall, stop auto-movement loop execution sequence
-        player.currentDir = null;
+        player.currentDir = null; // Wall impact, halt progression steps
     }
 
+    updateCameraPosition();
     drawGame();
 }
 
-// User inputs buffer paths instantly without waiting for movement execution frames
 window.addEventListener("keydown", (e) => {
     let pressedDir = null;
     switch(e.key.toLowerCase()) {
@@ -144,15 +190,13 @@ window.addEventListener("keydown", (e) => {
 
     if (pressedDir) {
         if (!player.currentDir) {
-            // If completely stopped, immediately evaluate if movement is valid
             let testOffsets = getDirOffsets(pressedDir);
             if (isWalkable(player.x + testOffsets.dx, player.y + testOffsets.dy)) {
                 player.currentDir = pressedDir;
-                updateMovementTick(); // Fire instantly for snappy response
+                updateGameTick();
             }
         } else {
-            // Buffer the move for the next available grid corridor turning point intersection
-            player.nextDir = pressedDir;
+            player.nextDir = pressedDir; // Buffer execution turns smoothly
         }
     }
 });
@@ -160,30 +204,48 @@ window.addEventListener("keydown", (e) => {
 function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Render Neon Blue Outline Maze
+    ctx.save();
+    // Offset everything by negative camera vector coordinates to follow scrolling motion
+    ctx.translate(-camera.x, -camera.y);
+
     ctx.lineWidth = 3;
     ctx.strokeStyle = "#0000ff";
 
-    for (let r = 0; r < GRID_ROWS; r++) {
-        if (!gameMap[r]) continue;
-        for (let c = 0; c < GRID_COLS; c++) {
+    // Dynamic Viewport Rendering bounds loops limits
+    for (let r = 0; r < WORLD_ROWS; r++) {
+        for (let c = 0; c < WORLD_COLS; c++) {
+            let x = c * TILE_SIZE;
+            let y = r * TILE_SIZE;
+
+            // PERFORMANCE SKIP: Do not spend GPU power rendering items completely outside view window
+            if (x + TILE_SIZE < camera.x || x > camera.x + canvas.width ||
+                y + TILE_SIZE < camera.y || y > camera.y + canvas.height) {
+                continue;
+            }
+
             if (gameMap[r][c] === 1) {
-                let x = c * TILE_SIZE;
-                let y = r * TILE_SIZE;
                 ctx.strokeRect(x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
             } else if (gameMap[r][c] === 0) {
+                // White Pac-Dots
                 ctx.fillStyle = "#ffffff";
                 ctx.beginPath();
-                ctx.arc(c * TILE_SIZE + TILE_SIZE / 2, r * TILE_SIZE + TILE_SIZE / 2, 3, 0, Math.PI * 2);
+                ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (gameMap[r][c] === 4) {
+                // Gold Currency Dots
+                ctx.fillStyle = "#ffff00";
+                ctx.beginPath();
+                ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 5, 0, Math.PI * 2);
                 ctx.fill();
             } else if (gameMap[r][c] === 3) {
-                ctx.fillStyle = "#00ff00"; // Exit point
-                ctx.fillRect(c * TILE_SIZE + 6, r * TILE_SIZE + 6, TILE_SIZE - 12, TILE_SIZE - 12);
+                // Ghost House Exit Door Gate Portal
+                ctx.fillStyle = gamePhase === "white" ? "#ff0000" : "#ffff00"; // Red locked, glowing yellow unlocked
+                ctx.fillRect(x + 2, y + 12, TILE_SIZE - 4, 8);
             }
         }
     }
 
-    // Dynamic Slicing Engine Processing
+    // Render Player inside Camera space transform limits
     let pX = player.x * TILE_SIZE + TILE_SIZE / 2;
     let pY = player.y * TILE_SIZE + TILE_SIZE / 2;
 
@@ -192,23 +254,13 @@ function drawGame() {
     ctx.rotate(player.angle);
 
     if (isSpriteLoaded) {
-        // Dynamically slice the sprite sheet based on its actual dimensions (2x2 grid format)
         let frameW = playerSprite.width / 2;
         let frameH = playerSprite.height / 2;
-
         let sourceX = player.animFrame * frameW;
-        // Top row for left/right angles, bottom row for up/down directions
         let sourceY = (player.currentDir === "up" || player.currentDir === "down") ? frameH : 0;
 
-        ctx.drawImage(
-            playerSprite,
-            sourceX, sourceY,
-            frameW, frameH,
-            -TILE_SIZE / 2, -TILE_SIZE / 2,
-            TILE_SIZE, TILE_SIZE
-        );
+        ctx.drawImage(playerSprite, sourceX, sourceY, frameW, frameH, -TILE_SIZE / 2, -TILE_SIZE / 2, TILE_SIZE, TILE_SIZE);
     } else {
-        // Vector safe graphics engine rendering routine
         ctx.fillStyle = "#ffff00";
         ctx.beginPath();
         let mouthSize = player.animFrame === 1 ? 0.2 : 0.04;
@@ -217,6 +269,9 @@ function drawGame() {
         ctx.fill();
     }
     ctx.restore();
+    ctx.restore(); // Close the global camera transformation sequence matrix window
 }
 
+// Initial draw execution frame load layout
+updateCameraPosition();
 drawGame();

@@ -9,7 +9,6 @@
 <body>
     <div id="gameContainer">
         <h1>PMRL: Pac-Man Roguelike</h1>
-        <!-- Viewport window size remains an crisp 832x576 arcade box -->
         <canvas id="gameCanvas" width="832" height="576"></canvas>
         <div id="ui">
             Score: <span id="scoreVal">0</span> | 
@@ -18,7 +17,8 @@
         </div>
         <p>Use WASD or Arrow Keys. Press once to move continuously.</p>
     </div>
-    <script src="map.js"></script>
+    <!-- Load map algorithms first -->
+    <script src="map_logic.js"></script>
     <script src="game.js"></script>
 </body>
 </html>
